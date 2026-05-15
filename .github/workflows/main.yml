@@ -3,6 +3,7 @@ name: Daily Article Publisher
 on:
   schedule:
     - cron: '0 1 * * *'  # 每天 UTC 1:00 (台灣時間 9:00)
+  workflow_dispatch:  # 允許手動觸發
 
 jobs:
   publish:
