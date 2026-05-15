@@ -1,0 +1,49 @@
+{
+  "deployment": {
+    "type": "App Service",
+    "region": "eastasia",
+    "resourceGroup": "your-resource-group",
+    "appServiceName": "your-app-service-name",
+    "appServicePlan": "your-app-service-plan"
+  },
+  "keyvault": {
+    "name": "your-keyvault-name",
+    "resourceGroup": "your-resource-group",
+    "secrets": [
+      {
+        "name": "G-SYSTEM-API-URL",
+        "value": "https://sungertain.deweichiu.com/api/articles/publish"
+      },
+      {
+        "name": "G-SYSTEM-API-KEY",
+        "value": "gsy_prod_1a2b3c4d5e6f7g8h9i0j_cowork_2026"
+      }
+    ]
+  },
+  "appInsights": {
+    "enabled": true,
+    "name": "your-app-insights-name",
+    "resourceGroup": "your-resource-group"
+  },
+  "environmentVariables": {
+    "AZURE_KEYVAULT_URL": "https://your-keyvault-name.vault.azure.net/",
+    "LOG_DIR": "/home/site/wwwroot/logs",
+    "ARTICLES_DIR": "/home/site/wwwroot"
+  },
+  "scheduler": {
+    "type": "Azure Function Timer Trigger",
+    "schedule": "0 1 * * *",
+    "timezone": "Asia/Taipei",
+    "description": "每天 1:00 UTC (9:00 台灣時間) 執行"
+  },
+  "python": {
+    "version": "3.11",
+    "requiredPackages": [
+      "requests>=2.31.0",
+      "python-docx>=0.8.11",
+      "azure-identity>=1.14.0",
+      "azure-keyvault-secrets>=4.7.0",
+      "python-dotenv>=1.0.0"
+    ]
+  }
+}
