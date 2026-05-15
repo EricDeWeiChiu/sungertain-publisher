@@ -96,8 +96,10 @@ def load_config() -> Tuple[str, str]:
 
 # ====== 配置 ======
 API_URL, API_KEY = load_config()
-LOG_DIR = Path(os.getenv('LOG_DIR', '/Users/ericchiu/Documents/sungertain-design/G系統專案/logs'))
-ARTICLES_DIR = Path(os.getenv('ARTICLES_DIR', '/Users/ericchiu/Documents/sungertain-design/G系統專案'))
+# 使用相對路徑（相對於此指令碼所在目錄）
+SCRIPT_DIR = Path(__file__).parent
+LOG_DIR = Path(os.getenv('LOG_DIR', str(SCRIPT_DIR / 'logs')))
+ARTICLES_DIR = Path(os.getenv('ARTICLES_DIR', str(SCRIPT_DIR)))
 
 # 建立日誌目錄
 LOG_DIR.mkdir(parents=True, exist_ok=True)

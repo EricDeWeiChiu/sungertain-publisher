@@ -18,8 +18,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 from article_publisher import publish_article
 import logging
 
-# 配置日誌
-LOG_DIR = Path('/Users/ericchiu/Documents/sungertain-design/G系統專案/logs')
+# 配置日誌（使用相對路徑）
+LOG_DIR = Path(__file__).parent / 'logs'
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
@@ -81,7 +81,8 @@ def find_article_file(day: int, category: str):
     檔名格式: YYYYMMDD_分類_商品名.docx
     例: 20260515_選購指南_靈芝茶包 (36入) -大.docx
     """
-    articles_dir = Path('/Users/ericchiu/Documents/sungertain-design/G系統專案')
+    # 使用相對路徑（相對於此指令碼所在目錄）
+    articles_dir = Path(__file__).parent
 
     # 取得今天的日期
     today = datetime.now()
