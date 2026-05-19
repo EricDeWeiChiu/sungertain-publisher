@@ -20,6 +20,9 @@ from typing import Dict, Tuple
 # 第三方庫
 import requests
 
+# 🆕 AI 自動審查引擎
+from ai_review_engine import AIReviewEngine, review_article
+
 # 嘗試導入 python-docx，如果失敗則使用備用方案
 try:
     from docx import Document
@@ -213,7 +216,8 @@ class DocxArticleParser:
             article_body = self._paragraphs_to_html(paragraphs)
             publish_date = self._parse_publish_date(meta['publish_date'])
 
-            return {
+            # 構建初始 payload
+            payload = {
                 'meta_title': meta['seo_title'],
                 'meta_description': meta['seo_description'],
                 'article_body': article_body,
@@ -227,6 +231,28 @@ class DocxArticleParser:
                 'references': hyperlinks,
                 'created_by': 'cowork_system'
             }
+
+            # 🆕 執行 AI 自動審查
+            ai_review = review_article(payload)
+            payload['ai_review_result'] = {
+                'passed': ai_review.passed,
+                'overall_score': ai_review.overall_score,
+                'issues_count': len(ai_review.issues),
+                'issues': [
+                    {
+                        'rule': issue.rule,
+                        'severity': issue.severity,
+                        'location': issue.location,
+                        'issue': issue.issue,
+                        'suggestion': issue.suggestion
+                    }
+                    for issue in ai_review.issues
+                ],
+                'summary': ai_review.summary,
+                'reviewed_at': ai_review.reviewed_at
+            }
+
+            return payload
         except Exception as e:
             logger.error(f"解析失敗: {e}")
             raise
@@ -373,7 +399,7 @@ class GSystemAPIClient:
             if field not in payload or not payload[field]:
                 return False, {'success': False, 'error_message': f'缺少: {field}'}
 
-        valid_categories = ['選購指南', '入門認識', '產品評測', '使用心得', '健康知識', '其他']
+        valid_categories = ['選購指南', '入門認識', '產品評測', '使用心得', '健康知識', '飲食指南', '其他']
         if payload['category'] not in valid_categories:
             return False, {'success': False, 'error_message': f'無效分類'}
 
@@ -481,6 +507,28 @@ def publish_article(docx_path: str, day_in_cycle: int) -> bool:
         payload = parser.parse(day_in_cycle)
         logger.info(f"✓ 已解析: {payload['meta_title'][:50]}")
 
+        # 🆕 檢查 AI 審查結果
+        ai_review = payload.get('ai_review_result', {})
+        if not ai_review.get('passed'):
+            logger.warning(f"⚠️ AI 審查未通過: {ai_review.get('summary')}")
+            # 詳細問題
+            for issue in ai_review.get('issues', []):
+                if issue.get('severity') == 'critical':
+                    logger.error(f"  🔴 [{issue.get('location')}] {issue.get('issue')}")
+                elif issue.get('severity') == 'warning':
+                    logger.warning(f"  🟡 [{issue.get('location')}] {issue.get('issue')}")
+
+            # 記錄未通過
+            with open(LOG_DIR / 'ai_review_failed.log', 'a', encoding='utf-8') as f:
+                f.write(f"[{datetime.now()}] {payload['meta_title']}\n")
+                f.write(f"  摘要: {ai_review.get('summary')}\n")
+                f.write(f"  問題數: {ai_review.get('issues_count')}\n\n")
+
+            # 選項 1: 仍然推送但標記為待審查
+            logger.info("⚠️ 將以草稿狀態推送給 G系統，由編輯人員審核")
+        else:
+            logger.info(f"✅ AI 審查通過! 評分: {ai_review.get('overall_score')}/100")
+
         # 推送
         client = GSystemAPIClient(API_URL, API_KEY)
         success, response = client.publish_article(payload)
@@ -494,6 +542,10 @@ def publish_article(docx_path: str, day_in_cycle: int) -> bool:
             # 記錄成功
             with open(LOG_DIR / 'success.log', 'a', encoding='utf-8') as f:
                 f.write(f"[{datetime.now()}] {article_id} - {payload['meta_title']}\n")
+                if ai_review.get('passed'):
+                    f.write(f"  AI 審查: ✅ 通過 (評分: {ai_review.get('overall_score')}/100)\n")
+                else:
+                    f.write(f"  AI 審查: ⚠️ 待改進 (評分: {ai_review.get('overall_score')}/100)\n")
 
             return True
         else:
