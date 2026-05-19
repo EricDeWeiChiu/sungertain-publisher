@@ -12,18 +12,30 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Node.js dependencies
+        run: |
+          npm install docx
+
+      - name: Generate article with Node.js
+        run: node generate_article.js
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install python-docx requests python-dotenv
 
-      - name: Run article publisher
+      - name: Publish article with Python
         env:
           G_SYSTEM_API_URL: ${{ secrets.G_SYSTEM_API_URL }}
           G_SYSTEM_API_KEY: ${{ secrets.G_SYSTEM_API_KEY }}
